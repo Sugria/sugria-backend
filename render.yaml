@@ -3,9 +3,11 @@ services:
     name: sugria-backend
     env: node
     buildCommand: >
-      yarn install --network-timeout 1000000 &&
+      yarn config set network-timeout 300000 &&
+      yarn install &&
+      yarn add -D @nestjs/cli &&
       npx prisma generate &&
-      yarn build
+      npx nest build
     startCommand: yarn start:prod
     envVars:
       - key: NODE_ENV
