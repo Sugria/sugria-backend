@@ -7,6 +7,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { RoutesService } from './routes.service';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { PrismaService } from './prisma/prisma.service';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -46,6 +47,16 @@ async function bootstrap() {
     logger.log(`${route.method} ${route.path}`);
   });
   logger.log('================\n');
+
+  // Test database connection
+  const prismaService = app.get(PrismaService);
+  try {
+    await prismaService.$connect();
+    console.log('Database connection successful');
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    process.exit(1);
+  }
 
   await app.listen(process.env.PORT || 5001);
   console.log(`Application is running on: http://localhost:${process.env.PORT || 5001}`);

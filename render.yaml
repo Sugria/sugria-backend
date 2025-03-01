@@ -4,13 +4,13 @@ services:
     env: node
     buildCommand: >
       yarn install --production=false &&
-      node node_modules/@nestjs/cli/bin/nest.js build &&
-      npx prisma generate
+      npx prisma generate &&
+      node node_modules/@nestjs/cli/bin/nest.js build
     startCommand: yarn start:prod
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DATABASE_URL
-        sync: false
+      - key: PROD_DATABASE_URL
+        value: postgresql://sugria_db_user:EizRH1LIcqjadVv3VcQl79TeQAmZeYQ4@dpg-cv1pfs3tq21c73da47l0-a.oregon-postgres.render.com/sugria_db
       - key: RESEND_API_KEY
         sync: false 
