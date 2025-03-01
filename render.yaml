@@ -2,7 +2,11 @@ services:
   - type: web
     name: sugria-backend
     env: node
-    buildCommand: yarn install && npx @nestjs/cli build && npx prisma generate
+    buildCommand: >
+      yarn install &&
+      yarn add @types/node @nestjs/common @nestjs/config @nestjs/core @nestjs/platform-express @nestjs/swagger @prisma/client reflect-metadata &&
+      npx prisma generate &&
+      yarn build
     startCommand: yarn start:prod
     envVars:
       - key: NODE_ENV
