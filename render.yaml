@@ -4,10 +4,10 @@ services:
     env: node
     buildCommand: >
       yarn config set network-timeout 300000 &&
-      yarn install &&
-      yarn add -D @nestjs/cli &&
+      yarn install --no-frozen-lockfile &&
+      yarn global add @nestjs/cli &&
       npx prisma generate &&
-      npx nest build
+      yarn build
     startCommand: yarn start:prod
     envVars:
       - key: NODE_ENV
