@@ -2,7 +2,7 @@ services:
   - type: web
     name: sugria-backend
     env: node
-    buildCommand: yarn install --frozen-lockfile && npx prisma generate && yarn build
+    buildCommand: yarn install && npx @nestjs/cli build && npx prisma generate
     startCommand: yarn start:prod
     envVars:
       - key: NODE_ENV
