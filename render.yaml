@@ -3,8 +3,7 @@ services:
     name: sugria-backend
     env: node
     buildCommand: >
-      yarn install &&
-      yarn add @types/node @nestjs/common @nestjs/config @nestjs/core @nestjs/platform-express @nestjs/swagger @prisma/client reflect-metadata &&
+      yarn install --network-timeout 1000000 &&
       npx prisma generate &&
       yarn build
     startCommand: yarn start:prod
