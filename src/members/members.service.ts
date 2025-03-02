@@ -23,7 +23,7 @@ export class MembersService {
       where: {
         OR: [
           { email: createMemberDto.email },
-          { workEmail: createMemberDto.workEmail },
+          { emailAddress: createMemberDto.emailAddress },
           { phoneNumber: createMemberDto.phoneNumber },
         ],
       },
@@ -31,7 +31,7 @@ export class MembersService {
 
     if (existingMember) {
       throw new ConflictException(
-        'A member with this email, work email, or phone number already exists',
+        'A member with this email, email address, or phone number already exists',
       );
     }
 
@@ -49,7 +49,7 @@ export class MembersService {
           firstName: createMemberDto.firstName,
           lastName: createMemberDto.lastName,
           email: createMemberDto.email,
-          workEmail: createMemberDto.workEmail,
+          emailAddress: createMemberDto.emailAddress,
           dateOfBirth: createMemberDto.dateOfBirth,
           gender: createMemberDto.gender,
           nationality: createMemberDto.nationality,
@@ -75,7 +75,7 @@ export class MembersService {
         'welcome-email',
         {
           name: `${member.firstName} ${member.lastName}`,
-          workEmail: member.workEmail,
+          workEmail: member.emailAddress,
         },
         {
           to: member.email,
