@@ -63,14 +63,6 @@ export class CreateMemberDto {
   @IsNotEmpty()
   email: string;
 
-  @ApiProperty({ 
-    example: 'john.doe@gmail.com',
-    description: 'Secondary email address'
-  })
-  @IsEmail()
-  @IsNotEmpty()
-  emailAddress: string;
-
   @ApiProperty({ example: '1990-01-01' })
   @Type(() => Date)
   @IsDate()

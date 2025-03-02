@@ -18,7 +18,7 @@ model Member {
   firstName            String
   lastName             String
   email               String   @unique
-  emailAddress        String   @unique
+  workEmail           String   @unique
   dateOfBirth         DateTime
   gender              String
   nationality         String
