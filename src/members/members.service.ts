@@ -17,63 +17,61 @@ export class MembersService {
     return `${firstName.toLowerCase()}.${lastName.toLowerCase()}@sugria.com`;
   }
 
-  async joinMovement(createMemberDto: CreateMemberDto) {
-    const workEmail = this.generateWorkEmail(
-      createMemberDto.firstName,
-      createMemberDto.lastName,
-    );
-
-    // Check for existing email or phone number
+  async create(createMemberDto: CreateMemberDto) {
+    // Check if member already exists
     const existingMember = await this.prisma.member.findFirst({
       where: {
         OR: [
           { email: createMemberDto.email },
+          { workEmail: createMemberDto.workEmail },
           { phoneNumber: createMemberDto.phoneNumber },
-          { workEmail },
         ],
       },
     });
 
     if (existingMember) {
-      throw new ConflictException('Member already exists');
+      throw new ConflictException(
+        'A member with this email, work email, or phone number already exists',
+      );
     }
 
-    // Convert emergencyContact to a plain object
-    const emergencyContact = {
-      name: createMemberDto.emergencyContact.name,
-      phoneNumber: createMemberDto.emergencyContact.phoneNumber,
-      relationship: createMemberDto.emergencyContact.relationship,
-    };
+    try {
+      // Convert emergencyContact to a plain object
+      const emergencyContact = {
+        name: createMemberDto.emergencyContact.name,
+        relationship: createMemberDto.emergencyContact.relationship,
+        phoneNumber: createMemberDto.emergencyContact.phoneNumber,
+      };
 
-    const member = await this.prisma.member.create({
-      data: {
-        firstName: createMemberDto.firstName,
-        lastName: createMemberDto.lastName,
-        email: createMemberDto.email,
-        workEmail,
-        dateOfBirth: createMemberDto.dateOfBirth,
-        gender: createMemberDto.gender,
-        nationality: createMemberDto.nationality,
-        phoneNumber: createMemberDto.phoneNumber,
-        residentialAddress: createMemberDto.residentialAddress,
-        emergencyContact,
-        education: {
-          create: {
-            highestLevel: createMemberDto.highestLevelOfEducation,
-            institutionName: createMemberDto.institutionName,
-            fieldOfStudy: createMemberDto.fieldOfStudy,
-            otherCertifications: createMemberDto.otherCertifications,
+      // Create member with education
+      const member = await this.prisma.member.create({
+        data: {
+          firstName: createMemberDto.firstName,
+          lastName: createMemberDto.lastName,
+          email: createMemberDto.email,
+          workEmail: createMemberDto.workEmail,
+          dateOfBirth: createMemberDto.dateOfBirth,
+          gender: createMemberDto.gender,
+          nationality: createMemberDto.nationality,
+          phoneNumber: createMemberDto.phoneNumber,
+          residentialAddress: createMemberDto.residentialAddress,
+          emergencyContact,
+          education: {
+            create: {
+              highestLevel: createMemberDto.education.highestLevel,
+              institutionName: createMemberDto.education.institutionName,
+              fieldOfStudy: createMemberDto.education.fieldOfStudy,
+              otherCertifications: createMemberDto.education.otherCertifications,
+            },
           },
         },
-      },
-      include: {
-        education: true,
-      },
-    });
+        include: {
+          education: true,
+        },
+      });
 
-    // Send welcome email asynchronously
-    this.emailService
-      .sendTemplatedEmail(
+      // Send welcome email
+      await this.emailService.sendTemplatedEmail(
         'welcome-email',
         {
           name: `${member.firstName} ${member.lastName}`,
@@ -88,18 +86,12 @@ export class MembersService {
             { name: 'user_id', value: member.id.toString() }
           ]
         },
-      )
-      .then((result: EmailResponse) => {
-        if ('error' in result) {
-          this.logger.error('Failed to send welcome email:', result.error);
-        } else {
-          this.logger.debug('Welcome email sent successfully:', result.id);
-        }
-      })
-      .catch(error => {
-        this.logger.error('Failed to send welcome email:', error);
-      });
+      );
 
-    return member;
+      return member;
+    } catch (error) {
+      this.logger.error('Error creating member:', error);
+      throw error;
+    }
   }
 } 

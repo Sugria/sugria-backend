@@ -11,22 +11,13 @@ export class MembersController {
   constructor(private readonly membersService: MembersService) {}
 
   @Post('join-movement')
-  @ApiOperation({ summary: 'Register a new member' })
-  @ApiResponse({ status: 201, description: 'Member successfully registered' })
+  @ApiOperation({ summary: 'Join the SUGRiA movement' })
+  @ApiResponse({ status: 201, description: 'Successfully joined the movement' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 409, description: 'Member already exists' })
   async joinMovement(@Body() createMemberDto: CreateMemberDto) {
-    this.logger.log('Incoming request data:');
-    this.logger.log(JSON.stringify(createMemberDto, null, 2));
-
-    try {
-      const result = await this.membersService.joinMovement(createMemberDto);
-      this.logger.log('Response data:');
-      this.logger.log(JSON.stringify(result, null, 2));
-      return result;
-    } catch (error) {
-      this.logger.error('Error processing request:');
-      this.logger.error(error.message);
-      throw error;
-    }
+    this.logger.log(`New member registration request: ${createMemberDto.email}`);
+    const result = await this.membersService.create(createMemberDto);
+    return result;
   }
 } 
