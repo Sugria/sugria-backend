@@ -4,6 +4,7 @@ services:
     env: node
     buildCommand: >
       yarn install --production=false &&
+      rm -rf dist &&
       npx prisma generate &&
       node node_modules/@nestjs/cli/bin/nest.js build
     startCommand: yarn start:prod
