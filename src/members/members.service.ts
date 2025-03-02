@@ -41,7 +41,7 @@ export class MembersService {
         name: createMemberDto.emergencyContact.name,
         relationship: createMemberDto.emergencyContact.relationship,
         phoneNumber: createMemberDto.emergencyContact.phoneNumber,
-      };
+      } as const;
 
       // Create member with education
       const member = await this.prisma.member.create({
