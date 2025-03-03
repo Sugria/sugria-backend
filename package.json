@@ -6,10 +6,10 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "prebuild": "yarn install && mkdir -p dist/email/templates && cp -r src/email/templates/* dist/email/templates/",
+    "prebuild": "mkdir -p dist/email/templates && cp -r src/email/templates/* dist/email/templates/",
     "build": "node node_modules/@nestjs/cli/bin/nest.js build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "node dist/main.js",
+    "start": "yarn install && yarn build && node dist/main.js",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main.js",
