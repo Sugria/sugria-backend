@@ -126,7 +126,7 @@ export class ProgramsService {
           farm: {
             create: {
               location: createApplicationDto.farm.location,
-              size: Number(createApplicationDto.farm.size),
+              size: createApplicationDto.farm.size || 0,
               type: createApplicationDto.farm.type,
               practices: createApplicationDto.farm.practices,
               challenges: createApplicationDto.farm.challenges,
