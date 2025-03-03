@@ -107,8 +107,12 @@ async function bootstrap() {
   }
 
   const port = process.env.PORT || 5001;
-  await app.listen(port);
-  logger.log(`Application is running on: ${await app.getUrl()}`);
-  console.log(`Swagger documentation: ${await app.getUrl()}/api`);
+  try {
+    await app.listen(port);
+    Logger.log(`🚀 Application is running on: http://localhost:${port}`);
+  } catch (error) {
+    Logger.error('Failed to start application', error);
+    process.exit(1);
+  }
 }
 bootstrap();
