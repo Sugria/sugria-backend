@@ -62,7 +62,7 @@ export class MembersService {
         nationality,
         phoneNumber,
         residentialAddress,
-        emergencyContact,
+        emergencyContact: emergencyContact as any,
         education: education
           ? {
               create: {
@@ -111,6 +111,6 @@ export class MembersService {
       education: member.education,
       createdAt: member.createdAt,
       updatedAt: member.updatedAt,
-    };
+    } as const;
   }
 } 

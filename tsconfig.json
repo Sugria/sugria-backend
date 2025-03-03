@@ -19,6 +19,7 @@
     "noFallthroughCasesInSwitch": false,
     "esModuleInterop": true,
     "types": [
+      "jest",
       "node",
       "multer"
     ],

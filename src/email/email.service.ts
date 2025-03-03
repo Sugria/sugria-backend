@@ -10,7 +10,8 @@ import {
 } from './types/email-response.type';
 import { join } from 'path';
 import * as fs from 'fs/promises';
-import * as Handlebars from 'handlebars';
+import * as handlebars from 'handlebars';
+import { Resend } from 'resend';
 
 @Injectable()
 export class EmailService implements OnModuleInit {
@@ -19,39 +20,44 @@ export class EmailService implements OnModuleInit {
   private readonly fromEmail: string;
   private readonly apiKey: string;
   private readonly apiUrl = 'https://api.resend.com';
+  private readonly resend: Resend;
   private readonly templates: Map<string, HandlebarsTemplateDelegate> = new Map();
 
   constructor(
     private configService: ConfigService,
-    @Inject('EMAIL_TEMPLATES_DIR') private templatesDir: string,
   ) {
     this.isDevelopment = this.configService.get('NODE_ENV') === 'development';
     const emailConfig = this.configService.get<EmailConfig>('email');
     this.apiKey = emailConfig.apiKey;
     this.fromEmail = emailConfig.from;
+    this.resend = new Resend(process.env.RESEND_API_KEY);
+    this.loadTemplates().catch(err => {
+      this.logger.error('Failed to load email templates:', err);
+    });
   }
 
   async onModuleInit() {
-    // Pre-compile templates on startup
-    await this.loadTemplates();
     if (this.isDevelopment) {
       this.logger.log('Development mode: Emails will be logged to console');
     }
   }
 
   private async loadTemplates() {
+    const templatesDir = join(__dirname, '..', '..', 'src', 'email', 'templates');
     try {
-      const files = await fs.readdir(this.templatesDir);
+      const files = await fs.readdir(templatesDir);
       for (const file of files) {
         if (file.endsWith('.hbs')) {
           const templateName = file.replace('.hbs', '');
-          const templateContent = await fs.readFile(join(this.templatesDir, file), 'utf-8');
-          this.templates.set(templateName, Handlebars.compile(templateContent));
+          const templateContent = await fs.readFile(join(templatesDir, file), 'utf-8');
+          this.templates.set(templateName, handlebars.compile(templateContent));
           this.logger.log(`Loaded email template: ${templateName}`);
         }
       }
+      this.logger.log(`Loaded ${this.templates.size} email templates`);
     } catch (error) {
-      this.logger.error('Failed to load email templates:', error);
+      this.logger.error('Error loading templates:', error);
+      throw error;
     }
   }
 

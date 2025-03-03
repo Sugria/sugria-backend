@@ -14,6 +14,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { AppConfigService } from './config/configuration.service';
 import { ProgramsModule } from './programs/programs.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ProgramsModule } from './programs/programs.module';
       ttl: 60000,
       limit: 10,
     }]),
+    AdminModule,
   ],
   providers: [RoutesService, AppConfigService],
 })

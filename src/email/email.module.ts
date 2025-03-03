@@ -1,19 +1,9 @@
-import { Module } from '@nestjs/common';
+import { Module, Global } from '@nestjs/common';
 import { EmailService } from './email.service';
-import { ConfigModule } from '@nestjs/config';
-import { join } from 'path';
 
+@Global() // Make the module global
 @Module({
-  imports: [
-    ConfigModule
-  ],
-  providers: [
-    {
-      provide: 'EMAIL_TEMPLATES_DIR',
-      useValue: join(__dirname, '..', 'src', 'email', 'templates'),
-    },
-    EmailService
-  ],
+  providers: [EmailService],
   exports: [EmailService],
 })
 export class EmailModule {} 

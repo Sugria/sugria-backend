@@ -26,22 +26,18 @@ export class EmergencyContactDto {
 }
 
 export class EducationDto {
-  @ApiProperty({ example: "Bachelor's Degree" })
   @IsString()
   @IsNotEmpty()
   highestLevel: string;
 
-  @ApiProperty({ example: 'University of Lagos' })
   @IsString()
   @IsNotEmpty()
   institutionName: string;
 
-  @ApiProperty({ example: 'Computer Science' })
   @IsString()
   @IsNotEmpty()
   fieldOfStudy: string;
 
-  @ApiProperty({ example: 'AWS Certified Developer', required: false })
   @IsString()
   @IsOptional()
   otherCertifications?: string;
@@ -64,10 +60,9 @@ export class CreateMemberDto {
   email: string;
 
   @ApiProperty({ example: '1990-01-01' })
-  @Type(() => Date)
-  @IsDate()
+  @IsString()
   @IsNotEmpty()
-  dateOfBirth: Date;
+  dateOfBirth: string;
 
   @ApiProperty({ example: 'Male' })
   @IsString()
@@ -103,10 +98,13 @@ export class CreateMemberDto {
       phoneNumber: '+2348087654321'
     }
   })
-  @Type(() => EmergencyContactDto)
-  @ValidateNested()
+  @IsObject()
   @IsNotEmpty()
-  emergencyContact: EmergencyContactDto;
+  emergencyContact: {
+    name: string;
+    relationship: string;
+    phoneNumber: string;
+  };
 
   @ApiProperty({
     type: EducationDto,
@@ -117,8 +115,8 @@ export class CreateMemberDto {
       otherCertifications: 'AWS Certified Developer'
     }
   })
-  @Type(() => EducationDto)
+  @IsOptional()
   @ValidateNested()
-  @IsNotEmpty()
-  education: EducationDto;
+  @Type(() => EducationDto)
+  education?: EducationDto;
 } 
