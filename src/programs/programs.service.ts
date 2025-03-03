@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
@@ -27,6 +27,58 @@ export class ProgramsService {
     return `${applicationId}-${hash}${fileExt}`;
   }
 
+  private async checkDuplicateApplication(dto: CreateApplicationDto) {
+    const existingApplication = await this.prisma.application.findFirst({
+      where: {
+        OR: [
+          {
+            personal: {
+              email: dto.personal.email
+            }
+          },
+          {
+            personal: {
+              phoneNumber: dto.personal.phoneNumber
+            }
+          },
+          {
+            AND: [
+              {
+                personal: {
+                  address: dto.personal.address
+                }
+              },
+              {
+                personal: {
+                  fullName: dto.personal.fullName
+                }
+              }
+            ]
+          }
+        ]
+      },
+      include: {
+        personal: true,
+        program: true
+      }
+    });
+
+    if (existingApplication) {
+      let duplicateField = '';
+      if (existingApplication.personal.email === dto.personal.email) {
+        duplicateField = 'email address';
+      } else if (existingApplication.personal.phoneNumber === dto.personal.phoneNumber) {
+        duplicateField = 'phone number';
+      } else {
+        duplicateField = 'address and name';
+      }
+
+      throw new ConflictException(
+        `An application (ID: ${existingApplication.applicationId}) has already been submitted with this ${duplicateField} for the ${existingApplication.program.category} program`
+      );
+    }
+  }
+
   async create(createApplicationDto: CreateApplicationDto, files: {
     'grant.budget'?: Express.Multer.File[];
     'motivation.identity'?: Express.Multer.File[];
@@ -35,6 +87,9 @@ export class ProgramsService {
       if (!files['grant.budget']?.[0] || !files['motivation.identity']?.[0]) {
         throw new BadRequestException('Missing required files');
       }
+
+      // Check for duplicate applications
+      await this.checkDuplicateApplication(createApplicationDto);
 
       const applicationId = this.generateApplicationId();
       
@@ -186,7 +241,7 @@ export class ProgramsService {
       };
     } catch (error) {
       this.logger.error('Error creating application:', error);
-      if (error instanceof BadRequestException) {
+      if (error instanceof BadRequestException || error instanceof ConflictException) {
         throw error;
       }
       throw new BadRequestException('Failed to submit application');

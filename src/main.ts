@@ -20,10 +20,25 @@ async function bootstrap() {
   // Security
   app.use(helmet());
   app.use(compression());
+
+  // CORS Configuration
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+      'http://localhost:3000',     // Local development
+      'https://sugria.com',        // Production frontend
+      'https://www.sugria.com'     // Production frontend with www
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: [
+      'Origin',
+      'X-Requested-With',
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'Access-Control-Allow-Origin'
+    ],
     credentials: true,
+    maxAge: 86400, // 24 hours
   });
 
   // Global validation pipe with error handling
