@@ -18,15 +18,24 @@ async function bootstrap() {
   const logger = new Logger('Routes');
 
   // Security
-  app.use(helmet());
+  app.use(helmet({
+    crossOriginResourcePolicy: { 
+      policy: 'cross-origin' 
+    },
+    crossOriginOpenerPolicy: { 
+      policy: 'same-origin-allow-popups' 
+    }
+  }));
   app.use(compression());
 
   // CORS Configuration
   app.enableCors({
     origin: process.env.ALLOWED_ORIGINS?.split(',') || [
       'http://localhost:3000',     // Local development
+      'http://localhost:3001',     // Alternative local development
       'https://sugria.com',        // Production frontend
-      'https://www.sugria.com'     // Production frontend with www
+      'https://www.sugria.com',    // Production frontend with www
+      'https://dev.sugria.com'     // Development/staging frontend
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
@@ -35,9 +44,15 @@ async function bootstrap() {
       'Content-Type',
       'Accept',
       'Authorization',
-      'Access-Control-Allow-Origin'
+      'Access-Control-Allow-Origin',
+      'Access-Control-Allow-Methods',
+      'Access-Control-Allow-Headers',
+      'Access-Control-Allow-Credentials'
     ],
+    exposedHeaders: ['Content-Disposition'],
     credentials: true,
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
     maxAge: 86400, // 24 hours
   });
 
