@@ -1,7 +1,19 @@
-# compiled output
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.test
+
+# Uploads directory
+/uploads/*
+!uploads/.gitkeep
+
+# Build output
 /dist
-/node_modules
 /build
+
+# Dependencies
+/node_modules
 
 # Logs
 logs
@@ -36,7 +48,6 @@ lerna-debug.log*
 !.vscode/extensions.json
 
 # dotenv environment variable files
-.env
 .env.development.local
 .env.test.local
 .env.production.local

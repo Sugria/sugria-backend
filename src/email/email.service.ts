@@ -1,7 +1,6 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
-import { EmailTemplateService } from './email-template.service';
 import { EmailConfig } from './types/email-config.type';
 import { 
   EmailResponse, 
@@ -9,6 +8,9 @@ import {
   EmailErrorResponse,
   ResendErrorResponse 
 } from './types/email-response.type';
+import { join } from 'path';
+import * as fs from 'fs/promises';
+import * as Handlebars from 'handlebars';
 
 @Injectable()
 export class EmailService implements OnModuleInit {
@@ -17,10 +19,11 @@ export class EmailService implements OnModuleInit {
   private readonly fromEmail: string;
   private readonly apiKey: string;
   private readonly apiUrl = 'https://api.resend.com';
+  private readonly templates: Map<string, HandlebarsTemplateDelegate> = new Map();
 
   constructor(
     private configService: ConfigService,
-    private emailTemplateService: EmailTemplateService,
+    @Inject('EMAIL_TEMPLATES_DIR') private templatesDir: string,
   ) {
     this.isDevelopment = this.configService.get('NODE_ENV') === 'development';
     const emailConfig = this.configService.get<EmailConfig>('email');
@@ -29,9 +32,35 @@ export class EmailService implements OnModuleInit {
   }
 
   async onModuleInit() {
+    // Pre-compile templates on startup
+    await this.loadTemplates();
     if (this.isDevelopment) {
       this.logger.log('Development mode: Emails will be logged to console');
     }
+  }
+
+  private async loadTemplates() {
+    try {
+      const files = await fs.readdir(this.templatesDir);
+      for (const file of files) {
+        if (file.endsWith('.hbs')) {
+          const templateName = file.replace('.hbs', '');
+          const templateContent = await fs.readFile(join(this.templatesDir, file), 'utf-8');
+          this.templates.set(templateName, Handlebars.compile(templateContent));
+          this.logger.log(`Loaded email template: ${templateName}`);
+        }
+      }
+    } catch (error) {
+      this.logger.error('Failed to load email templates:', error);
+    }
+  }
+
+  private getTemplate(name: string): HandlebarsTemplateDelegate {
+    const template = this.templates.get(name);
+    if (!template) {
+      throw new Error(`Template ${name} not found`);
+    }
+    return template;
   }
 
   async sendTemplatedEmail(
@@ -47,11 +76,11 @@ export class EmailService implements OnModuleInit {
       tags?: Array<{ name: string; value: string }>;
     },
   ): Promise<EmailResponse> {
-    const html = this.emailTemplateService.compileTemplate(templateName, data);
-
     try {
+      const template = this.getTemplate(templateName);
+      const html = template(data);
+
       if (this.isDevelopment) {
-        // In development, just log the email
         this.logger.debug('Email would have been sent in production:');
         this.logger.debug(`From: ${options.from || this.fromEmail}`);
         this.logger.debug(`To: ${options.to}`);
@@ -60,7 +89,6 @@ export class EmailService implements OnModuleInit {
         return { id: 'dev-mode-email-id' };
       }
 
-      // Send email using Resend API
       const response = await axios.post<ResendEmailResponse>(
         `${this.apiUrl}/emails`,
         {
@@ -89,18 +117,11 @@ export class EmailService implements OnModuleInit {
         this.logger.error(
           `Failed to send email: ${resendError.message} (${resendError.statusCode})`,
         );
-        return {
-          id: 'failed-to-send',
-          error: resendError.message,
-          statusCode: resendError.statusCode,
-        };
+        throw new Error(`Failed to send email: ${resendError.message}`);
       }
 
       this.logger.error(`Failed to send email: ${error.message}`);
-      return {
-        id: 'failed-to-send',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
+      throw new Error('Failed to send email');
     }
   }
 } 

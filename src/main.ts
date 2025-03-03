@@ -8,27 +8,45 @@ import { RoutesService } from './routes.service';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { PrismaService } from './prisma/prisma.service';
+import helmet from 'helmet';
+import compression from 'compression';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    logger: ['error', 'warn', 'log'], // Reduce logging in production
+  });
   const logger = new Logger('Routes');
 
-  // Enable CORS
-  app.enableCors();
+  // Security
+  app.use(helmet());
+  app.use(compression());
+  app.enableCors({
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  });
 
   // Global validation pipe with error handling
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
 
-  const config = new DocumentBuilder()
-    .setTitle('SUGRiA Movement API')
-    .setDescription('API for joining the SUGRiA movement')
-    .setVersion('1.0')
-    .addTag('members')
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  // Swagger documentation (only in development)
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('SUGRiA API')
+      .setDescription('The SUGRiA Movement API documentation')
+      .setVersion('1.0')
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api', app, document);
+  }
 
   // Serve static files in development
   if (process.env.NODE_ENV === 'development') {
@@ -58,8 +76,9 @@ async function bootstrap() {
     process.exit(1);
   }
 
-  await app.listen(process.env.PORT || 5001);
-  console.log(`Application is running on: http://localhost:${process.env.PORT || 5001}`);
-  console.log(`Swagger documentation: http://localhost:${process.env.PORT || 5001}/api`);
+  const port = process.env.PORT || 5001;
+  await app.listen(port);
+  logger.log(`Application is running on: ${await app.getUrl()}`);
+  console.log(`Swagger documentation: ${await app.getUrl()}/api`);
 }
 bootstrap();

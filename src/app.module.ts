@@ -13,6 +13,7 @@ import assetConfig from './config/asset.config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { AppConfigService } from './config/configuration.service';
+import { ProgramsModule } from './programs/programs.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AppConfigService } from './config/configuration.service';
     PrismaModule,
     EmailModule,
     MembersModule,
+    ProgramsModule,
     HealthModule,
     ThrottlerModule.forRoot([{
       name: 'short',

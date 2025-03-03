@@ -55,7 +55,7 @@ export class MembersService {
           lastName: createMemberDto.lastName,
           email: createMemberDto.email,
           workEmail,
-          dateOfBirth: createMemberDto.dateOfBirth,
+          dateOfBirth: new Date(createMemberDto.dateOfBirth),
           gender: createMemberDto.gender,
           nationality: createMemberDto.nationality,
           phoneNumber: createMemberDto.phoneNumber,
