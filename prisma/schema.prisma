@@ -12,6 +12,7 @@ model Member {
   firstName          String
   lastName           String
   email              String     @unique
+  workEmail          String     @unique
   dateOfBirth        DateTime
   gender             String
   nationality        String
@@ -20,7 +21,6 @@ model Member {
   emergencyContact   Json
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
-  workEmail          String     @unique
   education          Education?
 }
 
