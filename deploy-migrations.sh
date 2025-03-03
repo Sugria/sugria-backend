@@ -7,7 +7,7 @@ export DATABASE_URL="postgresql://sugria_db_user:EizRH1LIcqjadVv3VcQl79TeQAmZeYQ
 psql "$DATABASE_URL" -f prisma/migrations/fix_member_email.sql
 
 # Run migrations
-yarn prisma migrate reset --force
+yarn prisma migrate deploy
 
 # Generate Prisma client
 yarn prisma generate 
