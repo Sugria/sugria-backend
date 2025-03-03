@@ -9,7 +9,7 @@
     "prebuild": "mkdir -p dist/email/templates && cp -r src/email/templates/* dist/email/templates/",
     "build": "node node_modules/@nestjs/cli/bin/nest.js build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "yarn install && yarn build && node dist/main.js",
+    "start": "yarn install && yarn build && node --max-old-space-size=2048 dist/main.js",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main.js",
@@ -90,6 +90,6 @@
     "testEnvironment": "node"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": "18.x"
   }
 }
