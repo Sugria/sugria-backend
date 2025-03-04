@@ -19,7 +19,6 @@
     "noFallthroughCasesInSwitch": false,
     "esModuleInterop": true,
     "types": [
-      "jest",
       "node",
       "multer"
     ],
@@ -35,6 +34,7 @@
     "node_modules",
     "dist",
     "**/*.spec.ts",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "jest.config.ts"
   ]
 }
