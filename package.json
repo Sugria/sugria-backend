@@ -7,9 +7,9 @@
   "license": "UNLICENSED",
   "scripts": {
     "prebuild": "mkdir -p dist/email/templates && cp -r src/email/templates/* dist/email/templates/",
-    "build": "rimraf dist && node node_modules/@nestjs/cli/bin/nest.js build",
+    "build": "rm -rf dist && node node_modules/@nestjs/cli/bin/nest.js build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "node dist/main.js",
+    "start": "yarn install && yarn prisma generate && yarn build && node dist/main.js",
     "postinstall": "yarn prisma generate && yarn build",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
@@ -53,7 +53,6 @@
     "ts-loader": "^9.4.3",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.2.0",
-    "rimraf": "^5.0.0",
     "@types/jest": "^29.5.2",
     "ts-jest": "^29.1.0"
   },
