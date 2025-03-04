@@ -1,1 +1,1 @@
-web: yarn start 
+web: yarn install && yarn prisma generate && yarn build && yarn start:prod 

@@ -9,6 +9,7 @@
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
+    "rootDir": ".",
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
@@ -35,6 +36,11 @@
     "dist",
     "**/*.spec.ts",
     "**/*.test.ts",
+    "jest.config.ts"
+  ],
+  "include": [
+    "src/**/*",
+    "scripts/**/*",
     "jest.config.ts"
   ]
 }
