@@ -1,6 +1,6 @@
-import type { JestConfigWithTsJest } from 'ts-jest';
+import type { Config } from '@jest/types';
 
-const config: JestConfigWithTsJest = {
+const config: Config.InitialOptions = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: 'src',
   testRegex: '.*\\.spec\\.ts$',
