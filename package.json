@@ -6,10 +6,10 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "prebuild": "mkdir -p dist/email/templates && cp -r src/email/templates/* dist/email/templates/",
     "build": "rm -rf dist && node node_modules/@nestjs/cli/bin/nest.js build",
+    "postbuild": "mkdir -p dist/email/templates && cp -r src/email/templates/* dist/email/templates/",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "yarn install && yarn prisma generate && yarn build && node dist/main.js",
+    "start": "node dist/main.js",
     "postinstall": "yarn prisma generate && yarn build",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
