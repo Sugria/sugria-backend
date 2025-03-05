@@ -77,7 +77,7 @@ model Personal {
 }
 
 model Farm {
-  id          Int          @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   location    String
   size        Float
   type        String

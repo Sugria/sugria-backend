@@ -15,8 +15,14 @@ export class ProgramsController {
   @ApiResponse({ status: 201, description: 'Application submitted successfully' })
   @UseInterceptors(
     FileFieldsInterceptor([
-      { name: 'grant.budget', maxCount: 1 },
-      { name: 'motivation.identity', maxCount: 1 },
+      { 
+        name: 'grant.budgetFile', 
+        maxCount: 1 
+      },
+      { 
+        name: 'motivation.identityFile', 
+        maxCount: 1 
+      }
     ], {
       limits: {
         fileSize: 5 * 1024 * 1024, // 5MB limit
@@ -39,52 +45,63 @@ export class ProgramsController {
           ]
         };
 
-        // Check if file type is accepted
-        const isAcceptedType = [
-          ...acceptedMimeTypes.pdf,
-          ...acceptedMimeTypes.image
-        ].includes(file.mimetype);
-
-        if (!isAcceptedType) {
-          return cb(
-            new BadRequestException(
-              `Invalid file type for ${file.fieldname}. Only PDF, JPG, and PNG files are allowed. Received: ${file.mimetype}`
-            ), 
-            false
-          );
+        if (file.fieldname === 'grant.budgetFile') {
+          // Budget file: PDF only
+          const isPdfValid = acceptedMimeTypes.pdf.includes(file.mimetype);
+          if (!isPdfValid) {
+            return cb(
+              new BadRequestException(
+                'Budget file must be a PDF document'
+              ),
+              false
+            );
+          }
+        } else if (file.fieldname === 'motivation.identityFile') {
+          // Identity file: PDF, JPG, or PNG
+          const isValid = [
+            ...acceptedMimeTypes.pdf,
+            ...acceptedMimeTypes.image
+          ].includes(file.mimetype);
+          
+          if (!isValid) {
+            return cb(
+              new BadRequestException(
+                'Identity document must be a PDF, JPG, or PNG file'
+              ),
+              false
+            );
+          }
         }
 
         // Check file extension
         const fileExtension = file.originalname.toLowerCase().split('.').pop();
-        const acceptedExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
+        const acceptedExtensions = file.fieldname === 'grant.budgetFile' 
+          ? ['pdf']
+          : ['pdf', 'jpg', 'jpeg', 'png'];
         
         if (!acceptedExtensions.includes(fileExtension)) {
           return cb(
             new BadRequestException(
-              `Invalid file extension for ${file.fieldname}. Only .pdf, .jpg, .jpeg, and .png files are allowed. Received: .${fileExtension}`
+              `Invalid file extension for ${file.fieldname}. Allowed extensions: ${acceptedExtensions.join(', ')}`
             ),
             false
           );
         }
 
         cb(null, true);
-      },
-    }),
+      }
+    })
   )
   async createApplication(
     @Body() createApplicationDto: CreateApplicationDto,
-    @UploadedFiles()
-    files: {
-      'grant.budget'?: Express.Multer.File[];
-      'motivation.identity'?: Express.Multer.File[];
-    },
-  ) {
-    if (!files || !files['grant.budget']?.[0] || !files['motivation.identity']?.[0]) {
-      throw new BadRequestException(
-        'Both grant budget and motivation identity files are required. Please upload PDF, JPG, or PNG files.'
-      );
+    @UploadedFiles() files: {
+      'grant.budgetFile'?: Express.Multer.File[];
+      'motivation.identityFile'?: Express.Multer.File[];
     }
-
-    return this.programsService.create(createApplicationDto, files);
+  ) {
+    return this.programsService.create(createApplicationDto, {
+      'grant.budgetFile': files['grant.budgetFile'],
+      'motivation.identityFile': files['motivation.identityFile']
+    });
   }
 } 

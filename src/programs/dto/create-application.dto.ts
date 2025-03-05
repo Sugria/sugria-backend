@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEmail, IsDate, IsBoolean, IsNumber, IsNotEmpty, IsOptional, Matches } from 'class-validator';
+import { IsString, IsEmail, IsDate, IsBoolean, IsNumber, IsNotEmpty, IsOptional, Matches, ValidateNested, IsEnum, IsDateString } from 'class-validator';
 import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 
 export class ProgramDto {
   @ApiProperty({ example: 'rural' })
@@ -10,6 +11,11 @@ export class ProgramDto {
 
   @ApiProperty({ example: false })
   @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   previousTraining: boolean;
 
   @ApiProperty({ required: false })
@@ -51,10 +57,9 @@ export class PersonalDto {
   gender: string;
 
   @ApiProperty({ example: '1990-01-01' })
-  @Type(() => Date)
-  @IsDate()
+  @IsDateString()
   @IsNotEmpty()
-  dateOfBirth: Date;
+  dateOfBirth: string;
 }
 
 export class FarmDto {
@@ -63,40 +68,45 @@ export class FarmDto {
   @IsNotEmpty()
   location: string;
 
-  @ApiProperty({ example: 5.5 })
-  @IsNumber()
+  @ApiProperty({ example: '5.5', description: 'Farm size in hectares' })
+  @IsString()
+  @Transform(({ value }) => String(value))
   @IsNotEmpty()
-  size: number;
+  size: string;
 
-  @ApiProperty({ example: 'Maize, Cassava, Poultry' })
+  @ApiProperty({ example: 'Mixed Farming' })
   @IsString()
   @IsNotEmpty()
   type: string;
 
-  @ApiProperty({ example: 'Traditional farming with some modern irrigation' })
+  @ApiProperty({ example: 'Traditional' })
   @IsString()
   @IsNotEmpty()
   practices: string;
 
-  @ApiProperty({ example: 'Limited access to modern equipment, seasonal pests' })
+  @ApiProperty({ example: 'Water Access' })
   @IsString()
   @IsNotEmpty()
   challenges: string;
 }
 
 export class GrantDto {
-  @ApiProperty({ example: 'Increase crop yield by 50% and expand poultry operation' })
+  @ApiProperty({ example: 'Increase production' })
   @IsString()
   @IsNotEmpty()
   outcomes: string;
 
-  @ApiProperty({ type: 'string', format: 'binary' })
-  budget: Express.Multer.File;
+  @ApiProperty({ 
+    type: 'string', 
+    format: 'binary',
+    description: 'Budget document (PDF file only, max 5MB)'
+  })
+  budgetFile: Express.Multer.File;
 }
 
 export class TrainingDto {
   @ApiProperty({ example: 'in-person' })
-  @IsString()
+  @IsEnum(['in-person', 'online', 'hybrid'])
   @IsNotEmpty()
   preference: string;
 }
@@ -107,18 +117,27 @@ export class MotivationDto {
   @IsNotEmpty()
   statement: string;
 
-  @ApiProperty({ example: 'Will invest in modern equipment and training' })
+  @ApiProperty({ example: 'Will implement modern techniques' })
   @IsString()
   @IsNotEmpty()
   implementation: string;
 
-  @ApiProperty({ type: 'string', format: 'binary' })
-  identity: Express.Multer.File;
+  @ApiProperty({ 
+    type: 'string', 
+    format: 'binary',
+    description: 'Identity document (PDF, JPG, or PNG file, max 5MB)'
+  })
+  identityFile: Express.Multer.File;
 }
 
 export class DeclarationDto {
   @ApiProperty({ example: true })
   @IsBoolean()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   @IsNotEmpty()
   agreed: boolean;
 
@@ -130,36 +149,43 @@ export class DeclarationDto {
 
 export class CreateApplicationDto {
   @ApiProperty({ type: ProgramDto })
+  @ValidateNested()
   @Type(() => ProgramDto)
   @IsNotEmpty()
   program: ProgramDto;
 
   @ApiProperty({ type: PersonalDto })
+  @ValidateNested()
   @Type(() => PersonalDto)
   @IsNotEmpty()
   personal: PersonalDto;
 
   @ApiProperty({ type: FarmDto })
+  @ValidateNested()
   @Type(() => FarmDto)
   @IsNotEmpty()
   farm: FarmDto;
 
   @ApiProperty({ type: GrantDto })
+  @ValidateNested()
   @Type(() => GrantDto)
   @IsNotEmpty()
   grant: GrantDto;
 
   @ApiProperty({ type: TrainingDto })
+  @ValidateNested()
   @Type(() => TrainingDto)
   @IsNotEmpty()
   training: TrainingDto;
 
   @ApiProperty({ type: MotivationDto })
+  @ValidateNested()
   @Type(() => MotivationDto)
   @IsNotEmpty()
   motivation: MotivationDto;
 
   @ApiProperty({ type: DeclarationDto })
+  @ValidateNested()
   @Type(() => DeclarationDto)
   @IsNotEmpty()
   declaration: DeclarationDto;

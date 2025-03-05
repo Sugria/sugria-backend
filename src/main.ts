@@ -85,6 +85,8 @@ async function bootstrap() {
     });
   }
 
+  app.useStaticAssets(join(__dirname, '..', 'email/templates'));
+
   // Log all routes after initialization
   const routesService = app.get(RoutesService);
   const routes = routesService.getRoutes();

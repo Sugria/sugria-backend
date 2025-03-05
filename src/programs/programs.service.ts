@@ -79,12 +79,15 @@ export class ProgramsService {
     }
   }
 
-  async create(createApplicationDto: CreateApplicationDto, files: {
-    'grant.budget'?: Express.Multer.File[];
-    'motivation.identity'?: Express.Multer.File[];
-  }) {
+  async create(
+    createApplicationDto: CreateApplicationDto, 
+    files: {
+      'grant.budgetFile'?: Express.Multer.File[];
+      'motivation.identityFile'?: Express.Multer.File[];
+    }
+  ) {
     try {
-      if (!files['grant.budget']?.[0] || !files['motivation.identity']?.[0]) {
+      if (!files['grant.budgetFile']?.[0] || !files['motivation.identityFile']?.[0]) {
         throw new BadRequestException('Missing required files');
       }
 
@@ -95,11 +98,11 @@ export class ProgramsService {
       
       // Generate secure filenames
       const budgetFileName = this.generateSecureFileName(
-        files['grant.budget'][0].originalname,
+        files['grant.budgetFile'][0].originalname,
         applicationId,
       );
       const identityFileName = this.generateSecureFileName(
-        files['motivation.identity'][0].originalname,
+        files['motivation.identityFile'][0].originalname,
         applicationId,
       );
 
@@ -126,7 +129,7 @@ export class ProgramsService {
           farm: {
             create: {
               location: createApplicationDto.farm.location,
-              size: createApplicationDto.farm.size || 0,
+              size: parseFloat(createApplicationDto.farm.size) || 0,
               type: createApplicationDto.farm.type,
               practices: createApplicationDto.farm.practices,
               challenges: createApplicationDto.farm.challenges,
@@ -246,5 +249,58 @@ export class ProgramsService {
       }
       throw new BadRequestException('Failed to submit application');
     }
+  }
+
+  async createApplication(createApplicationDto: CreateApplicationDto) {
+    const { program, personal, farm, grant, training, motivation, declaration } = createApplicationDto;
+
+    // Generate application ID
+    const applicationId = this.generateApplicationId();
+
+    return this.prisma.application.create({
+      data: {
+        applicationId,
+        program: {
+          create: program
+        },
+        personal: {
+          create: personal
+        },
+        farm: {
+          create: {
+            ...farm,
+            size: parseFloat(farm.size)
+          }
+        },
+        grant: {
+          create: {
+            outcomes: grant.outcomes,
+            budgetFile: grant.budgetFile?.filename
+          }
+        },
+        training: {
+          create: training
+        },
+        motivation: {
+          create: {
+            statement: motivation.statement,
+            implementation: motivation.implementation,
+            identityFile: motivation.identityFile?.filename
+          }
+        },
+        declaration: {
+          create: declaration
+        }
+      },
+      include: {
+        program: true,
+        personal: true,
+        farm: true,
+        grant: true,
+        training: true,
+        motivation: true,
+        declaration: true,
+      }
+    });
   }
 } 
