@@ -77,7 +77,7 @@ model Personal {
 }
 
 model Farm {
-  id          Int         @id @default(autoincrement())
+  id          Int          @id @default(autoincrement())
   location    String
   size        Float
   type        String
@@ -87,10 +87,13 @@ model Farm {
 }
 
 model Grant {
-  id          Int          @id @default(autoincrement())
-  outcomes    String
-  budgetFile  String
-  application Application?
+  id                     Int          @id @default(autoincrement())
+  outcomes               String
+  budgetFile             String
+  budgetFileMimeType     String?
+  budgetFileOriginalName String?
+  budgetFileSize         Int?
+  application            Application?
 }
 
 model Training {
@@ -100,11 +103,14 @@ model Training {
 }
 
 model Motivation {
-  id             Int          @id @default(autoincrement())
-  statement      String
-  implementation String
-  identityFile   String
-  application    Application?
+  id                       Int          @id @default(autoincrement())
+  statement                String
+  implementation           String
+  identityFile             String
+  identityFileMimeType     String?
+  identityFileOriginalName String?
+  identityFileSize         Int?
+  application              Application?
 }
 
 model Declaration {
@@ -112,4 +118,14 @@ model Declaration {
   agreed      Boolean
   officerName String
   application Application?
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  role      String   @default("admin")
 }
