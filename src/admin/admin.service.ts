@@ -523,4 +523,16 @@ export class AdminService {
 
     return application;
   }
+
+  async getCounts() {
+    const [membersCount, applicationsCount] = await Promise.all([
+      this.prisma.member.count(),
+      this.prisma.application.count()
+    ]);
+
+    return {
+      totalMembers: membersCount,
+      totalApplications: applicationsCount
+    };
+  }
 } 

@@ -5,6 +5,7 @@ import { SendEmailDto } from './dto/email.dto';
 import { MemberEmailFiltersDto } from './dto/member-email-filters.dto';
 import { ApplicationEmailFiltersDto } from './dto/application-email-filters.dto';
 import { LoginDto } from './dto/login.dto';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Admin')
 @Controller('admin')
@@ -93,5 +94,12 @@ export class AdminController {
     @Query('limit') limit = 10,
   ) {
     return this.adminService.getAllUsers({ type, search, page, limit });
+  }
+
+  @Public()
+  @Get('stats/counts')
+  @ApiOperation({ summary: 'Get total counts of members and applications' })
+  async getCounts() {
+    return this.adminService.getCounts();
   }
 } 
