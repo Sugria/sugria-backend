@@ -559,24 +559,48 @@ export class AdminService {
 
   async deleteApplication(applicationId: string) {
     try {
-      // Delete all related records in the correct order
-      await this.prisma.$transaction([
-        this.prisma.declaration.deleteMany({ where: { application: { applicationId } } }),
-        this.prisma.motivation.deleteMany({ where: { application: { applicationId } } }),
-        this.prisma.training.deleteMany({ where: { application: { applicationId } } }),
-        this.prisma.grant.deleteMany({ where: { application: { applicationId } } }),
-        this.prisma.farm.deleteMany({ where: { application: { applicationId } } }),
-        this.prisma.personal.deleteMany({ where: { application: { applicationId } } }),
-        this.prisma.program.deleteMany({ where: { application: { applicationId } } }),
-        this.prisma.application.delete({ where: { applicationId } })
-      ]);
+      console.log(`Attempting to delete application: ${applicationId}`);
 
+      // First check if application exists
+      const application = await this.prisma.application.findUnique({
+        where: { applicationId }
+      });
+
+      if (!application) {
+        console.log(`Application not found: ${applicationId}`);
+        throw new NotFoundException(`Application ${applicationId} not found`);
+      }
+
+      // Delete in correct order based on foreign key relationships
+      await this.prisma.$transaction(async (tx) => {
+        // First delete the application since it has the foreign keys
+        await tx.application.delete({
+          where: { applicationId }
+        });
+
+        // Then delete the orphaned records
+        await Promise.all([
+          tx.declaration.delete({ where: { id: application.declarationId } }),
+          tx.motivation.delete({ where: { id: application.motivationId } }),
+          tx.training.delete({ where: { id: application.trainingId } }),
+          tx.grant.delete({ where: { id: application.grantId } }),
+          tx.farm.delete({ where: { id: application.farmId } }),
+          tx.personal.delete({ where: { id: application.personalId } }),
+          tx.program.delete({ where: { id: application.programId } })
+        ]);
+      });
+
+      console.log(`Successfully deleted application: ${applicationId}`);
       return {
         success: true,
         message: `Application ${applicationId} deleted successfully`
       };
     } catch (error) {
-      throw new NotFoundException('Application not found or already deleted');
+      console.error('Error deleting application:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new Error(`Failed to delete application: ${error.message}`);
     }
   }
 } 
