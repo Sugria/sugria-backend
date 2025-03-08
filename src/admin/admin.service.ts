@@ -443,8 +443,12 @@ export class AdminService {
   }
 
   // List Applications with Basic Info
-  async listApplications({ search, status, page, limit }) {
-    const skip = (page - 1) * limit;
+  async listApplications({ search, status, page = 1, limit = 10 }) {
+    // Convert page and limit to numbers
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const skip = (pageNum - 1) * limitNum;
+
     const where = {
       AND: [
         status ? { status: status } : {},
@@ -485,7 +489,7 @@ export class AdminService {
           },
         },
         skip,
-        take: limit,
+        take: limitNum, // Using the converted number
         orderBy: { submittedAt: 'desc' },
       }),
       this.prisma.application.count({ where }),
@@ -495,9 +499,9 @@ export class AdminService {
       data: applications,
       meta: {
         total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
+        page: pageNum,
+        limit: limitNum,
+        pages: Math.ceil(total / limitNum),
       },
     };
   }
