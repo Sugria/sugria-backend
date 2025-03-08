@@ -47,10 +47,15 @@ export class AdminController {
   async listApplications(
     @Query('search') search?: string,
     @Query('status') status?: string,
-    @Query('page') page = 1,
-    @Query('limit') limit = 10,
+    @Query('page', new ParseIntPipe({ optional: true })) page = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit = 10,
   ) {
-    return this.adminService.listApplications({ search, status, page, limit });
+    return this.adminService.listApplications({ 
+      search, 
+      status, 
+      page, 
+      limit 
+    });
   }
 
   @Get('applications/:id')
