@@ -1,48 +1,62 @@
-import { Controller, Post, Get, Body, UseGuards, Patch, Query } from '@nestjs/common';
+import { Controller, Post, Get, Body, Patch, Query, Param } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { AdminAuthGuard } from './guards/admin-auth.guard';
-import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { SendEmailDto } from './dto/email.dto';
 import { MemberEmailFiltersDto } from './dto/member-email-filters.dto';
 import { ApplicationEmailFiltersDto } from './dto/application-email-filters.dto';
+import { LoginDto } from './dto/login.dto';
 
 @ApiTags('Admin')
 @Controller('admin')
-@UseGuards(AdminAuthGuard)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Post('login')
-  async login(@Body() credentials: { email: string; password: string }) {
-    return this.adminService.login(credentials.email, credentials.password);
+  async login(@Body() loginDto: LoginDto) {
+    console.log('Login request received:', loginDto);
+    return this.adminService.login(loginDto.email, loginDto.password);
   }
 
   @Get('members')
-  @ApiOperation({ summary: 'Get all members with optional filters' })
+  @ApiOperation({ summary: 'List all members with basic information' })
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })
-  async getMembers(
+  async listMembers(
     @Query('search') search?: string,
     @Query('page') page = 1,
     @Query('limit') limit = 10,
   ) {
-    return this.adminService.getMembers({ search, page, limit });
+    return this.adminService.listMembers({ search, page, limit });
+  }
+
+  @Get('members/:id')
+  @ApiOperation({ summary: 'Get detailed information for a specific member' })
+  @ApiParam({ name: 'id', type: 'number' })
+  async getMemberDetails(@Param('id') id: number) {
+    return this.adminService.getMemberDetails(id);
   }
 
   @Get('applications')
-  @ApiOperation({ summary: 'Get all applications with optional filters' })
-  @ApiQuery({ name: 'status', required: false })
-  @ApiQuery({ name: 'category', required: false })
+  @ApiOperation({ summary: 'List all applications with basic information' })
   @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'status', required: false })
   @ApiQuery({ name: 'page', required: false })
-  async getApplications(
-    @Query('status') status?: string,
-    @Query('category') category?: string,
+  @ApiQuery({ name: 'limit', required: false })
+  async listApplications(
     @Query('search') search?: string,
+    @Query('status') status?: string,
     @Query('page') page = 1,
+    @Query('limit') limit = 10,
   ) {
-    return this.adminService.getApplications({ status, category, search, page });
+    return this.adminService.listApplications({ search, status, page, limit });
+  }
+
+  @Get('applications/:id')
+  @ApiOperation({ summary: 'Get detailed information for a specific application' })
+  @ApiParam({ name: 'id', type: 'string', description: 'Application ID' })
+  async getApplicationDetails(@Param('id') id: string) {
+    return this.adminService.getApplicationDetails(id);
   }
 
   @Post('email/members')

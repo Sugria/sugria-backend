@@ -10,12 +10,15 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 import { PrismaService } from './prisma/prisma.service';
 import helmet from 'helmet';
 import compression from 'compression';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    logger: ['error', 'warn', 'log'], // Reduce logging in production
+    logger: process.env.NODE_ENV === 'development' 
+      ? ['log', 'error', 'warn', 'debug', 'verbose']
+      : ['error', 'warn'],
   });
-  const logger = new Logger('Routes');
 
   // Security
   app.use(helmet({
@@ -67,6 +70,11 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor());
 
+  // Only use logging interceptor in development
+  if (process.env.NODE_ENV === 'development') {
+    app.useGlobalInterceptors(new LoggingInterceptor());
+  }
+
   // Swagger documentation (only in development)
   if (process.env.NODE_ENV !== 'production') {
     const config = new DocumentBuilder()
@@ -108,6 +116,10 @@ async function bootstrap() {
     process.exit(1);
   }
 
+  // Log environment variables (remove in production)
+  logger.debug(`JWT_SECRET: ${process.env.JWT_SECRET}`);
+  logger.debug(`ADMIN_PASSWORD_HASH exists: ${!!process.env.ADMIN_PASSWORD_HASH}`);
+  
   const port = process.env.PORT || 5001;
   try {
     await app.listen(port);

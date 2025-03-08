@@ -15,6 +15,8 @@ import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { AppConfigService } from './config/configuration.service';
 import { ProgramsModule } from './programs/programs.module';
 import { AdminModule } from './admin/admin.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -34,6 +36,10 @@ import { AdminModule } from './admin/admin.module';
       limit: 10,
     }]),
     AdminModule,
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'files'),
+      serveRoot: '/files',
+    }),
   ],
   providers: [RoutesService, AppConfigService],
 })

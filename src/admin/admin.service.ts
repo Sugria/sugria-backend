@@ -1,8 +1,7 @@
-import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
 import { EmailService } from '../email/email.service';
+import * as bcrypt from 'bcrypt';
 import { SendEmailDto } from './dto/email.dto';
 import { MemberEmailFiltersDto } from './dto/member-email-filters.dto';
 import { ApplicationEmailFiltersDto } from './dto/application-email-filters.dto';
@@ -14,27 +13,59 @@ export class AdminService {
 
   constructor(
     private prisma: PrismaService,
-    private jwtService: JwtService,
     private emailService: EmailService,
   ) {}
 
   async login(email: string, password: string) {
-    if (email !== 'admin@sugria.com') {
-      throw new UnauthorizedException('Invalid credentials');
+    try {
+      console.log('\n🔐 Admin Login Process');
+      console.log('━━━━━━━━━━━━━━━━━━━━━');
+      console.log('Login attempt with:', { email, password });
+      
+      const admin = await this.prisma.admin.findUnique({
+        where: { email }
+      });
+
+      // Debug: Log full admin object
+      console.log('\nFound admin in database:', JSON.stringify(admin, null, 2));
+
+      if (!admin) {
+        console.log('❌ Admin not found');
+        throw new UnauthorizedException('Invalid credentials');
+      }
+      console.log('✓ Admin found');
+
+      // Debug: Log password comparison details
+      console.log('\nComparing passwords:');
+      console.log('Input password:', password);
+      console.log('Stored hash:', admin.password);
+      
+      const isPasswordValid = await bcrypt.compare(
+        password,
+        admin.password
+      );
+
+      console.log('Password comparison result:', isPasswordValid);
+
+      if (!isPasswordValid) {
+        console.log('❌ Password invalid');
+        throw new UnauthorizedException('Invalid credentials');
+      }
+      console.log('✓ Password verified');
+      
+      console.log('\n✅ Login successful');
+      console.log('━━━━━━━━━━━━━━━━━━━━━\n');
+      
+      return { 
+        success: true,
+        email: admin.email,
+        role: admin.role
+      };
+    } catch (error) {
+      console.error('\n❌ Login error:', error.message);
+      console.error('Error stack:', error.stack);
+      throw error;
     }
-
-    // In production, use hashed password comparison
-    const isPasswordValid = await bcrypt.compare(
-      password,
-      process.env.ADMIN_PASSWORD_HASH || '$2b$10$YourHashedPasswordHere',
-    );
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const token = this.jwtService.sign({ email, role: 'admin' });
-    return { access_token: token };
   }
 
   async getAllApplications() {
@@ -352,5 +383,144 @@ export class AdminService {
         applicantCount,
       },
     };
+  }
+
+  // List Members with Basic Info
+  async listMembers({ search, page, limit }) {
+    const skip = (Number(page) - 1) * Number(limit);
+    const where = search ? {
+      OR: [
+        { firstName: { contains: search, mode: 'insensitive' as const } },
+        { lastName: { contains: search, mode: 'insensitive' as const } },
+        { email: { contains: search, mode: 'insensitive' as const } },
+      ],
+    } : {};
+
+    const [members, total] = await Promise.all([
+      this.prisma.member.findMany({
+        where,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phoneNumber: true,
+          nationality: true,
+          createdAt: true,
+        },
+        skip,
+        take: Number(limit),
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.member.count({ where }),
+    ]);
+
+    return {
+      data: members,
+      meta: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  // Get Member Details
+  async getMemberDetails(id: number) {
+    const member = await this.prisma.member.findUnique({
+      where: { id },
+      include: {
+        education: true,
+      },
+    });
+
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    return member;
+  }
+
+  // List Applications with Basic Info
+  async listApplications({ search, status, page, limit }) {
+    const skip = (page - 1) * limit;
+    const where = {
+      AND: [
+        status ? { status: status } : {},
+        search ? {
+          OR: [
+            { applicationId: { contains: search, mode: 'insensitive' as const } },
+            {
+              personal: {
+                OR: [
+                  { fullName: { contains: search, mode: 'insensitive' as const } },
+                  { email: { contains: search, mode: 'insensitive' as const } },
+                ]
+              }
+            }
+          ],
+        } : {},
+      ],
+    };
+
+    const [applications, total] = await Promise.all([
+      this.prisma.application.findMany({
+        where,
+        select: {
+          applicationId: true,
+          status: true,
+          submittedAt: true,
+          personal: {
+            select: {
+              fullName: true,
+              email: true,
+              phoneNumber: true,
+            },
+          },
+          program: {
+            select: {
+              category: true,
+            },
+          },
+        },
+        skip,
+        take: limit,
+        orderBy: { submittedAt: 'desc' },
+      }),
+      this.prisma.application.count({ where }),
+    ]);
+
+    return {
+      data: applications,
+      meta: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  // Get Application Details
+  async getApplicationDetails(applicationId: string) {
+    const application = await this.prisma.application.findUnique({
+      where: { applicationId },
+      include: {
+        program: true,
+        personal: true,
+        farm: true,
+        grant: true,
+        training: true,
+        motivation: true,
+        declaration: true,
+      },
+    });
+
+    if (!application) {
+      throw new NotFoundException('Application not found');
+    }
+
+    return application;
   }
 } 

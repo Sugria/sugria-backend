@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
+import { v2 as cloudinary } from 'cloudinary';
 import axios from 'axios';
 
 @Injectable()
@@ -15,23 +15,36 @@ export class StorageService {
   }
 
   async uploadFile(file: Express.Multer.File, folder: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: `sugria/${folder}`,
-          resource_type: 'auto',
-          format: 'pdf',  // Force PDF format for PDFs
-          flags: 'attachment',  // Allow direct download
-          type: 'upload'
-        },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result.secure_url);
-        }
-      );
+    try {
+      console.log('Uploading file to Cloudinary:', {
+        filename: file.originalname,
+        size: file.size,
+        mimetype: file.mimetype,
+        folder: folder
+      });
 
-      uploadStream.end(file.buffer);
-    });
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: `sugria/${folder}`,
+            resource_type: 'auto',
+          },
+          (error, result) => {
+            if (error) {
+              console.error('Cloudinary upload error:', error);
+              return reject(error);
+            }
+            console.log('File uploaded successfully:', result.secure_url);
+            resolve(result.secure_url);
+          }
+        );
+
+        uploadStream.end(file.buffer);
+      });
+    } catch (error) {
+      console.error('Upload error:', error);
+      throw error;
+    }
   }
 
   // No need for signed URLs as Cloudinary URLs are public but secure
@@ -41,31 +54,17 @@ export class StorageService {
 
   async getFileBuffer(url: string): Promise<Buffer> {
     try {
-      // Extract public ID and version from URL
-      const matches = url.match(/\/v(\d+)\/(.+?)(?:\.[^.]+)?$/);
-      if (!matches) {
-        throw new Error('Invalid Cloudinary URL');
-      }
+      console.log('Fetching file from Cloudinary:', url);
 
-      const [, version, publicId] = matches;
-
-      // Generate signed URL
-      const timestamp = Math.round(new Date().getTime() / 1000);
-      const signature = cloudinary.utils.api_sign_request(
-        { public_id: publicId, version, timestamp },
-        this.configService.get('CLOUDINARY_API_SECRET')
-      );
-
-      // Construct authenticated URL
-      const signedUrl = `${url}?api_key=${this.configService.get('CLOUDINARY_API_KEY')}&timestamp=${timestamp}&signature=${signature}`;
-
-      const response = await axios.get(signedUrl, {
+      const response = await axios.get(url, {
         responseType: 'arraybuffer',
         headers: {
-          'Accept': '*/*'
+          'Accept': '*/*',
+          'User-Agent': 'Mozilla/5.0'
         }
       });
 
+      console.log('File fetched successfully, size:', response.data.length);
       return Buffer.from(response.data);
     } catch (error) {
       console.error('File fetch error:', error);

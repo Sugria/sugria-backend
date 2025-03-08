@@ -1,9 +1,12 @@
-import { Injectable, Logger, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
 import { createHash } from 'crypto';
 import { extname } from 'path';
+import { createWriteStream, mkdirSync, existsSync } from 'fs';
+import { join } from 'path';
+import { StorageService } from '../common/services/storage.service';
 
 @Injectable()
 export class ProgramsService {
@@ -12,7 +15,25 @@ export class ProgramsService {
   constructor(
     private prisma: PrismaService,
     private emailService: EmailService,
-  ) {}
+    private storageService: StorageService,
+  ) {
+    // Ensure upload directories exist
+    this.initializeUploadDirectories();
+  }
+
+  private initializeUploadDirectories() {
+    const uploadPaths = [
+      join(process.cwd(), 'files'),        // Creates /files
+      join(process.cwd(), 'files/budget'), // Creates /files/budget
+      join(process.cwd(), 'files/identity')// Creates /files/identity
+    ];
+
+    uploadPaths.forEach(path => {
+      if (!existsSync(path)) {
+        mkdirSync(path, { recursive: true });
+      }
+    });
+  }
 
   private generateApplicationId(): string {
     return `APP${Date.now().toString().slice(-6)}${Math.random().toString(36).slice(-2).toUpperCase()}`;
@@ -79,36 +100,30 @@ export class ProgramsService {
     }
   }
 
-  async create(
-    createApplicationDto: CreateApplicationDto, 
-    files: {
-      'grant.budgetFile'?: Express.Multer.File[];
-      'motivation.identityFile'?: Express.Multer.File[];
-    }
-  ) {
+  async create(createApplicationDto: CreateApplicationDto, files: {
+    'grant.budgetFile'?: Express.Multer.File[];
+    'motivation.identityFile'?: Express.Multer.File[];
+  }) {
     try {
-      if (!files['grant.budgetFile']?.[0] || !files['motivation.identityFile']?.[0]) {
+      const budgetFile = files['grant.budgetFile']?.[0];
+      const identityFile = files['motivation.identityFile']?.[0];
+
+      if (!budgetFile || !identityFile) {
         throw new BadRequestException('Missing required files');
       }
 
       // Check for duplicate applications
       await this.checkDuplicateApplication(createApplicationDto);
 
-      const applicationId = this.generateApplicationId();
-      
-      // Generate secure filenames
-      const budgetFileName = this.generateSecureFileName(
-        files['grant.budgetFile'][0].originalname,
-        applicationId,
-      );
-      const identityFileName = this.generateSecureFileName(
-        files['motivation.identityFile'][0].originalname,
-        applicationId,
-      );
+      // Upload files to Cloudinary
+      const [budgetFileUrl, identityFileUrl] = await Promise.all([
+        this.storageService.uploadFile(budgetFile, 'budget'),
+        this.storageService.uploadFile(identityFile, 'identity'),
+      ]);
 
       const application = await this.prisma.application.create({
         data: {
-          applicationId,
+          applicationId: this.generateApplicationId(),
           program: {
             create: {
               category: createApplicationDto.program.category,
@@ -138,7 +153,10 @@ export class ProgramsService {
           grant: {
             create: {
               outcomes: createApplicationDto.grant.outcomes,
-              budgetFile: budgetFileName,
+              budgetFile: budgetFileUrl,
+              budgetFileOriginalName: budgetFile.originalname,
+              budgetFileSize: budgetFile.size,
+              budgetFileMimeType: budgetFile.mimetype,
             },
           },
           training: {
@@ -150,7 +168,10 @@ export class ProgramsService {
             create: {
               statement: createApplicationDto.motivation.statement,
               implementation: createApplicationDto.motivation.implementation,
-              identityFile: identityFileName,
+              identityFile: identityFileUrl,
+              identityFileOriginalName: identityFile.originalname,
+              identityFileSize: identityFile.size,
+              identityFileMimeType: identityFile.mimetype,
             },
           },
           declaration: {
@@ -198,49 +219,25 @@ export class ProgramsService {
       }
 
       return {
-        success: true,
-        data: {
-          applicationId: application.applicationId,
-          status: application.status,
-          submittedAt: application.submittedAt,
-          program: {
-            category: application.program.category,
-            previousTraining: application.program.previousTraining,
-            trainingId: application.program.trainingId,
-          },
-          personal: {
-            fullName: application.personal.fullName,
-            email: application.personal.email,
-            phoneNumber: application.personal.phoneNumber,
-            address: application.personal.address,
-            gender: application.personal.gender,
-            dateOfBirth: application.personal.dateOfBirth,
-          },
-          farm: {
-            location: application.farm.location,
-            size: application.farm.size,
-            type: application.farm.type,
-            practices: application.farm.practices,
-            challenges: application.farm.challenges,
-          },
-          grant: {
-            outcomes: application.grant.outcomes,
-            budgetFile: application.grant.budgetFile,
-          },
-          training: {
-            preference: application.training.preference,
-          },
-          motivation: {
-            statement: application.motivation.statement,
-            implementation: application.motivation.implementation,
-            identityFile: application.motivation.identityFile,
-          },
-          declaration: {
-            agreed: application.declaration.agreed,
-            officerName: application.declaration.officerName,
-          },
+        ...application,
+        grant: {
+          ...application.grant,
+          budgetFile: {
+            url: budgetFileUrl,
+            filename: application.grant.budgetFileOriginalName,
+            size: application.grant.budgetFileSize,
+            type: application.grant.budgetFileMimeType,
+          }
         },
-        message: 'Application submitted successfully',
+        motivation: {
+          ...application.motivation,
+          identityFile: {
+            url: identityFileUrl,
+            filename: application.motivation.identityFileOriginalName,
+            size: application.motivation.identityFileSize,
+            type: application.motivation.identityFileMimeType,
+          }
+        }
       };
     } catch (error) {
       this.logger.error('Error creating application:', error);
@@ -302,5 +299,40 @@ export class ProgramsService {
         declaration: true,
       }
     });
+  }
+
+  async getApplicationDetails(applicationId: string) {
+    const application = await this.prisma.application.findUnique({
+      where: { applicationId },
+      include: {
+        program: true,
+        personal: true,
+        farm: true,
+        grant: true,
+        training: true,
+        motivation: true,
+        declaration: true,
+      },
+    });
+
+    if (!application) {
+      throw new NotFoundException('Application not found');
+    }
+
+    return {
+      ...application,
+      grant: {
+        ...application.grant,
+        budgetFile: application.grant.budgetFile,
+        budgetFileMimeType: application.grant.budgetFileMimeType || 'application/pdf',
+        budgetFileOriginalName: application.grant.budgetFileOriginalName || 'budget.pdf'
+      },
+      motivation: {
+        ...application.motivation,
+        identityFile: application.motivation.identityFile,
+        identityFileMimeType: application.motivation.identityFileMimeType || 'application/pdf',
+        identityFileOriginalName: application.motivation.identityFileOriginalName || 'identity.pdf'
+      }
+    };
   }
 } 

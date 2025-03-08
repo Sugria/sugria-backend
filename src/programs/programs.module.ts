@@ -4,24 +4,18 @@ import { ProgramsService } from './programs.service';
 import { PrismaModule } from '../prisma/prisma.module';
 import { EmailModule } from '../email/email.module';
 import { MulterModule } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { memoryStorage } from 'multer';
+import { StorageService } from '../common/services/storage.service';
 
 @Module({
   imports: [
     PrismaModule,
     EmailModule,
     MulterModule.register({
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, callback) => {
-          const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-          callback(null, `${file.fieldname}-${uniqueSuffix}${extname(file.originalname)}`);
-        },
-      }),
+      storage: memoryStorage(),
     }),
   ],
   controllers: [ProgramsController],
-  providers: [ProgramsService],
+  providers: [ProgramsService, StorageService],
 })
 export class ProgramsModule {} 

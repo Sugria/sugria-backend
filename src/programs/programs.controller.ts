@@ -1,13 +1,18 @@
-import { Controller, Post, Body, UseInterceptors, UploadedFiles, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, UseInterceptors, UploadedFiles, BadRequestException, Get, Param, Res, NotFoundException } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiConsumes, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ProgramsService } from './programs.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
+import { Response } from 'express';
+import { StorageService } from '../common/services/storage.service';
 
 @ApiTags('programs')
 @Controller('programs')
 export class ProgramsController {
-  constructor(private readonly programsService: ProgramsService) {}
+  constructor(
+    private readonly programsService: ProgramsService,
+    private readonly storageService: StorageService
+  ) {}
 
   @Post('applications')
   @ApiOperation({ summary: 'Submit a new program application' })
@@ -15,82 +20,9 @@ export class ProgramsController {
   @ApiResponse({ status: 201, description: 'Application submitted successfully' })
   @UseInterceptors(
     FileFieldsInterceptor([
-      { 
-        name: 'grant.budgetFile', 
-        maxCount: 1 
-      },
-      { 
-        name: 'motivation.identityFile', 
-        maxCount: 1 
-      }
-    ], {
-      limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB limit
-      },
-      fileFilter: (req, file, cb) => {
-        // List of accepted MIME types
-        const acceptedMimeTypes = {
-          pdf: [
-            'application/pdf',
-            'application/x-pdf',
-            'application/acrobat',
-            'application/vnd.pdf',
-            'text/pdf',
-            'text/x-pdf'
-          ],
-          image: [
-            'image/jpeg',
-            'image/jpg',
-            'image/png'
-          ]
-        };
-
-        if (file.fieldname === 'grant.budgetFile') {
-          // Budget file: PDF only
-          const isPdfValid = acceptedMimeTypes.pdf.includes(file.mimetype);
-          if (!isPdfValid) {
-            return cb(
-              new BadRequestException(
-                'Budget file must be a PDF document'
-              ),
-              false
-            );
-          }
-        } else if (file.fieldname === 'motivation.identityFile') {
-          // Identity file: PDF, JPG, or PNG
-          const isValid = [
-            ...acceptedMimeTypes.pdf,
-            ...acceptedMimeTypes.image
-          ].includes(file.mimetype);
-          
-          if (!isValid) {
-            return cb(
-              new BadRequestException(
-                'Identity document must be a PDF, JPG, or PNG file'
-              ),
-              false
-            );
-          }
-        }
-
-        // Check file extension
-        const fileExtension = file.originalname.toLowerCase().split('.').pop();
-        const acceptedExtensions = file.fieldname === 'grant.budgetFile' 
-          ? ['pdf']
-          : ['pdf', 'jpg', 'jpeg', 'png'];
-        
-        if (!acceptedExtensions.includes(fileExtension)) {
-          return cb(
-            new BadRequestException(
-              `Invalid file extension for ${file.fieldname}. Allowed extensions: ${acceptedExtensions.join(', ')}`
-            ),
-            false
-          );
-        }
-
-        cb(null, true);
-      }
-    })
+      { name: 'grant.budgetFile', maxCount: 1 },
+      { name: 'motivation.identityFile', maxCount: 1 }
+    ])
   )
   async createApplication(
     @Body() createApplicationDto: CreateApplicationDto,
@@ -99,9 +31,88 @@ export class ProgramsController {
       'motivation.identityFile'?: Express.Multer.File[];
     }
   ) {
-    return this.programsService.create(createApplicationDto, {
-      'grant.budgetFile': files['grant.budgetFile'],
-      'motivation.identityFile': files['motivation.identityFile']
-    });
+    return this.programsService.create(createApplicationDto, files);
+  }
+
+  @Get('applications/:applicationId/files/:fileType/view')
+  async viewFile(
+    @Param('applicationId') applicationId: string,
+    @Param('fileType') fileType: 'budget' | 'identity',
+    @Res() res: Response
+  ) {
+    try {
+      console.log(`Viewing file: ${fileType} for application: ${applicationId}`);
+      
+      const application = await this.programsService.getApplicationDetails(applicationId);
+      
+      const file = fileType === 'budget' 
+        ? {
+            url: application.grant.budgetFile,
+            type: application.grant.budgetFileMimeType,
+            filename: application.grant.budgetFileOriginalName
+          }
+        : {
+            url: application.motivation.identityFile,
+            type: application.motivation.identityFileMimeType,
+            filename: application.motivation.identityFileOriginalName
+          };
+
+      console.log('File details:', file);
+
+      const fileBuffer = await this.storageService.getFileBuffer(file.url);
+      
+      res.set({
+        'Content-Type': file.type || 'application/octet-stream',
+        'Content-Disposition': `inline; filename="${file.filename}"`,
+        'Content-Length': fileBuffer.length,
+        'Cache-Control': 'private, no-cache',
+        'Pragma': 'no-cache'
+      });
+
+      return res.send(fileBuffer);
+    } catch (error) {
+      console.error('View file error:', error);
+      throw new NotFoundException('File not found or inaccessible');
+    }
+  }
+
+  @Get('applications/:applicationId/files/:fileType/download')
+  async downloadFile(
+    @Param('applicationId') applicationId: string,
+    @Param('fileType') fileType: 'budget' | 'identity',
+    @Res() res: Response
+  ) {
+    try {
+      console.log(`Downloading file: ${fileType} for application: ${applicationId}`);
+      
+      const application = await this.programsService.getApplicationDetails(applicationId);
+      
+      const file = fileType === 'budget' 
+        ? {
+            url: application.grant.budgetFile,
+            type: application.grant.budgetFileMimeType,
+            filename: application.grant.budgetFileOriginalName
+          }
+        : {
+            url: application.motivation.identityFile,
+            type: application.motivation.identityFileMimeType,
+            filename: application.motivation.identityFileOriginalName
+          };
+
+      console.log('File details:', file);
+
+      const fileBuffer = await this.storageService.getFileBuffer(file.url);
+      
+      res.set({
+        'Content-Type': file.type || 'application/octet-stream',
+        'Content-Disposition': `attachment; filename="${file.filename}"`,
+        'Content-Length': fileBuffer.length
+      });
+
+      return res.send(fileBuffer);
+    } catch (error) {
+      console.error('Download file error:', error);
+      throw new NotFoundException('File not found or inaccessible');
+    }
   }
 } 
