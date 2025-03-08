@@ -535,4 +535,48 @@ export class AdminService {
       totalApplications: applicationsCount
     };
   }
+
+  async deleteMember(id: number) {
+    try {
+      // First delete related education record if exists
+      await this.prisma.education.deleteMany({
+        where: { memberId: id }
+      });
+
+      // Then delete the member
+      const deletedMember = await this.prisma.member.delete({
+        where: { id }
+      });
+
+      return {
+        success: true,
+        message: `Member ${deletedMember.email} deleted successfully`
+      };
+    } catch (error) {
+      throw new NotFoundException('Member not found or already deleted');
+    }
+  }
+
+  async deleteApplication(applicationId: string) {
+    try {
+      // Delete all related records in the correct order
+      await this.prisma.$transaction([
+        this.prisma.declaration.deleteMany({ where: { application: { applicationId } } }),
+        this.prisma.motivation.deleteMany({ where: { application: { applicationId } } }),
+        this.prisma.training.deleteMany({ where: { application: { applicationId } } }),
+        this.prisma.grant.deleteMany({ where: { application: { applicationId } } }),
+        this.prisma.farm.deleteMany({ where: { application: { applicationId } } }),
+        this.prisma.personal.deleteMany({ where: { application: { applicationId } } }),
+        this.prisma.program.deleteMany({ where: { application: { applicationId } } }),
+        this.prisma.application.delete({ where: { applicationId } })
+      ]);
+
+      return {
+        success: true,
+        message: `Application ${applicationId} deleted successfully`
+      };
+    } catch (error) {
+      throw new NotFoundException('Application not found or already deleted');
+    }
+  }
 } 

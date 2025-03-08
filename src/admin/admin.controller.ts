@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Patch, Query, Param } from '@nestjs/common';
+import { Controller, Post, Get, Body, Patch, Query, Param, Delete } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { SendEmailDto } from './dto/email.dto';
@@ -101,5 +101,19 @@ export class AdminController {
   @ApiOperation({ summary: 'Get total counts of members and applications' })
   async getCounts() {
     return this.adminService.getCounts();
+  }
+
+  @Delete('members/:id')
+  @ApiOperation({ summary: 'Delete a member' })
+  @ApiParam({ name: 'id', type: 'number' })
+  async deleteMember(@Param('id') id: number) {
+    return this.adminService.deleteMember(id);
+  }
+
+  @Delete('applications/:applicationId')
+  @ApiOperation({ summary: 'Delete an application' })
+  @ApiParam({ name: 'applicationId', type: 'string' })
+  async deleteApplication(@Param('applicationId') applicationId: string) {
+    return this.adminService.deleteApplication(applicationId);
   }
 } 
