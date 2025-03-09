@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import * as bcrypt from 'bcrypt';
@@ -18,53 +18,38 @@ export class AdminService {
 
   async login(email: string, password: string) {
     try {
-      console.log('\n🔐 Admin Login Process');
-      console.log('━━━━━━━━━━━━━━━━━━━━━');
-      console.log('Login attempt with:', { email, password });
-      
+      console.log('Login attempt for:', email);
+
       const admin = await this.prisma.admin.findUnique({
         where: { email }
       });
 
-      // Debug: Log full admin object
-      console.log('\nFound admin in database:', JSON.stringify(admin, null, 2));
-
       if (!admin) {
-        console.log('❌ Admin not found');
+        console.log('Admin not found:', email);
         throw new UnauthorizedException('Invalid credentials');
       }
-      console.log('✓ Admin found');
 
-      // Debug: Log password comparison details
-      console.log('\nComparing passwords:');
-      console.log('Input password:', password);
-      console.log('Stored hash:', admin.password);
-      
-      const isPasswordValid = await bcrypt.compare(
-        password,
-        admin.password
-      );
-
-      console.log('Password comparison result:', isPasswordValid);
-
+      const isPasswordValid = await bcrypt.compare(password, admin.password);
       if (!isPasswordValid) {
-        console.log('❌ Password invalid');
+        console.log('Invalid password for:', email);
         throw new UnauthorizedException('Invalid credentials');
       }
-      console.log('✓ Password verified');
-      
-      console.log('\n✅ Login successful');
-      console.log('━━━━━━━━━━━━━━━━━━━━━\n');
-      
+
+      console.log('Login successful for:', email);
+
       return { 
         success: true,
-        email: admin.email,
-        role: admin.role
+        email: admin.email, 
+        role: admin.role,
+        name: admin.name,
+        id: admin.id
       };
     } catch (error) {
-      console.error('\n❌ Login error:', error.message);
-      console.error('Error stack:', error.stack);
-      throw error;
+      console.error('Login error:', error);
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Login failed: ' + error.message);
     }
   }
 
