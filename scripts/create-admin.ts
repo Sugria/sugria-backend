@@ -9,9 +9,7 @@ const prisma = new PrismaClient();
 async function createAdmin() {
   try {
     // Delete existing admin if exists
-    await prisma.admin.deleteMany({
-      where: { email: 'admin@sugria.com' }
-    });
+    await prisma.admin.deleteMany();
 
     // Create new admin
     const password = 'sugria@admin2024';

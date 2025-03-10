@@ -121,7 +121,7 @@ model Declaration {
 }
 
 model Admin {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(cuid())
   email     String   @unique
   password  String
   name      String
