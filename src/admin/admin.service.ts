@@ -29,7 +29,17 @@ export class AdminService {
         throw new UnauthorizedException('Invalid credentials');
       }
 
+      console.log('Found admin:', {
+        id: admin.id,
+        email: admin.email,
+        name: admin.name,
+        // Don't log the actual password
+        passwordLength: admin.password.length
+      });
+
       const isPasswordValid = await bcrypt.compare(password, admin.password);
+      console.log('Password validation result:', isPasswordValid);
+
       if (!isPasswordValid) {
         console.log('Invalid password for:', email);
         throw new UnauthorizedException('Invalid credentials');
