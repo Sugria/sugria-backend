@@ -8,10 +8,16 @@ const prisma = new PrismaClient();
 
 async function createAdmin() {
   try {
-    // Create new admin with dashboard credentials
-    const password = 'admin@sugria2025'; // New password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    console.log('Password hash:', hashedPassword);
+    // Use specific salt rounds for consistency
+    const SALT_ROUNDS = 10;
+    const password = 'admin@sugria2025';
+    
+    // Generate hash
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    console.log('\nCreating admin with:');
+    console.log('Email:', 'admin@sugria.com');
+    console.log('Password:', password);
+    console.log('Generated hash:', hashedPassword);
 
     const admin = await prisma.admin.create({
       data: {
@@ -22,7 +28,13 @@ async function createAdmin() {
       }
     });
 
-    console.log('Admin created successfully:', {
+    // Test the password immediately
+    const isValid = await bcrypt.compare(password, admin.password);
+    console.log('\nVerification:');
+    console.log('Password verification:', isValid);
+    console.log('Stored hash matches generated hash:', admin.password === hashedPassword);
+
+    console.log('\nAdmin created successfully:', {
       id: admin.id,
       email: admin.email,
       role: admin.role,
