@@ -11,7 +11,7 @@ async function createAdmin() {
     // Create new admin with dashboard credentials
     const password = 'admin@sugria2025'; // New password
     const hashedPassword = await bcrypt.hash(password, 10);
-    console.log('Created password hash');
+    console.log('Password hash:', hashedPassword);
 
     const admin = await prisma.admin.create({
       data: {
