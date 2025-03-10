@@ -8,18 +8,16 @@ const prisma = new PrismaClient();
 
 async function createAdmin() {
   try {
-    // Delete existing admin if exists
-    await prisma.admin.deleteMany();
-
-    // Create new admin
-    const password = 'sugria@admin2024';
+    // Create new admin with dashboard credentials
+    const password = 'admin@sugria2025'; // New password
     const hashedPassword = await bcrypt.hash(password, 10);
+    console.log('Created password hash');
 
     const admin = await prisma.admin.create({
       data: {
         email: 'admin@sugria.com',
         password: hashedPassword,
-        name: 'System Admin',
+        name: 'Dashboard Admin',
         role: 'admin'
       }
     });
@@ -27,7 +25,8 @@ async function createAdmin() {
     console.log('Admin created successfully:', {
       id: admin.id,
       email: admin.email,
-      role: admin.role
+      role: admin.role,
+      name: admin.name
     });
 
   } catch (error) {
