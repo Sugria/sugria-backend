@@ -2,7 +2,6 @@ import { Injectable, Logger, BadRequestException, ConflictException, NotFoundExc
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { CreateApplicationDto } from './dto/create-application.dto';
-import { createHash } from 'crypto';
 import { extname } from 'path';
 import { createWriteStream, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
@@ -39,11 +38,19 @@ export class ProgramsService {
     return `APP${Date.now().toString().slice(-6)}${Math.random().toString(36).slice(-2).toUpperCase()}`;
   }
 
+  private generateHash(input: string): string {
+    let hash = 0;
+    for (let i = 0; i < input.length; i++) {
+      const char = input.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+  }
+
   private generateSecureFileName(originalName: string, applicationId: string): string {
     const fileExt = extname(originalName);
-    const hash = createHash('sha256')
-      .update(`${applicationId}-${Date.now()}-${Math.random()}`)
-      .digest('hex')
+    const hash = this.generateHash(`${applicationId}-${Date.now()}-${Math.random()}`)
       .slice(0, 12);
     return `${applicationId}-${hash}${fileExt}`;
   }
