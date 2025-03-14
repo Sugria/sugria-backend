@@ -1,45 +1,39 @@
-import { IsString, IsEmail, IsDateString, IsObject, IsNotEmpty, IsOptional, ValidateNested } from 'class-validator';
+import { IsString, IsDateString, IsObject, ValidateNested } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { EmergencyContactDto, EducationDto } from './shared.dto';
 
-export class CreateMemberDto {
-  @ApiProperty({ example: 'John' })
+export class UpdateMemberDto {
+  @ApiProperty()
   @IsString()
-  @IsNotEmpty()
   firstName: string;
 
-  @ApiProperty({ example: 'Doe' })
+  @ApiProperty()
   @IsString()
-  @IsNotEmpty()
   lastName: string;
 
-  @ApiProperty({ example: 'john.doe@example.com' })
-  @IsEmail()
-  @IsNotEmpty()
-  email: string;
+  @ApiProperty({ description: 'Must be a valid @sugria.com email address' })
+  @IsString()
+  workEmail: string;
 
-  @ApiProperty({ example: '1990-01-01' })
+  @ApiProperty()
   @IsDateString()
   dateOfBirth: string;
 
-  @ApiProperty({ example: 'Male' })
+  @ApiProperty()
   @IsString()
-  @IsNotEmpty()
   gender: string;
 
-  @ApiProperty({ example: 'Nigerian' })
+  @ApiProperty()
   @IsString()
-  @IsNotEmpty()
   nationality: string;
 
   @ApiProperty({ description: 'Any valid phone number format' })
   @IsString()
   phoneNumber: string;
 
-  @ApiProperty({ example: '123 Main Street, Lagos' })
+  @ApiProperty()
   @IsString()
-  @IsNotEmpty()
   residentialAddress: string;
 
   @ApiProperty({ type: EmergencyContactDto })

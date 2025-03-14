@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Member {
@@ -22,6 +23,9 @@ model Member {
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
   education          Education?
+  @@unique([firstName, lastName, email])
+  @@index([email])
+  @@index([workEmail])
 }
 
 model Education {
@@ -126,6 +130,36 @@ model Admin {
   password  String
   name      String
   role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmailTemplate {
+  id            Int      @id @default(autoincrement())
+  name          String   @unique
+  subject       String
+  content       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model EmailTracking {
+  id             Int      @id @default(autoincrement())
+  resendId       String   @unique
+  recipientEmail String
+  status         String   @default("pending")
+  sentAt         DateTime @default(now())
+  emailTemplateId Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Recovery {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  token     String   @unique
+  type      String   
+  status    String   @default("pending")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

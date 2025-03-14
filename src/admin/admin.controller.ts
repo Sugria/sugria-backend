@@ -4,19 +4,11 @@ import { ApiTags, ApiOperation, ApiQuery, ApiParam } from '@nestjs/swagger';
 import { SendEmailDto } from './dto/email.dto';
 import { MemberEmailFiltersDto } from './dto/member-email-filters.dto';
 import { ApplicationEmailFiltersDto } from './dto/application-email-filters.dto';
-import { LoginDto } from './dto/login.dto';
-import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('Admin')
 @Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
-
-  @Post('login')
-  async login(@Body() loginDto: LoginDto) {
-    console.log('Login request received:', loginDto);
-    return this.adminService.login(loginDto.email, loginDto.password);
-  }
 
   @Get('members')
   @ApiOperation({ summary: 'List all members with basic information' })
@@ -25,8 +17,8 @@ export class AdminController {
   @ApiQuery({ name: 'limit', required: false })
   async listMembers(
     @Query('search') search?: string,
-    @Query('page') page = 1,
-    @Query('limit') limit = 10,
+    @Query('page', new ParseIntPipe({ optional: true })) page = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit = 10,
   ) {
     return this.adminService.listMembers({ search, page, limit });
   }
@@ -101,14 +93,12 @@ export class AdminController {
     return this.adminService.getAllUsers({ type, search, page, limit });
   }
 
-  @Public()
   @Get('stats/counts')
   @ApiOperation({ summary: 'Get total counts of members and applications' })
   async getCounts() {
     return this.adminService.getCounts();
   }
 
-  @Public()
   @Delete('members/:id')
   @ApiOperation({ summary: 'Delete a member' })
   @ApiParam({ name: 'id', type: 'number' })
@@ -116,7 +106,6 @@ export class AdminController {
     return this.adminService.deleteMember(id);
   }
 
-  @Public()
   @Delete('applications/:applicationId')
   @ApiOperation({ summary: 'Delete an application' })
   @ApiParam({ name: 'applicationId', type: 'string' })

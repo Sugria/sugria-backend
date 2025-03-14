@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -22,6 +24,26 @@ async function main() {
   } else {
     console.log('ℹ️ Admin user already exists');
   }
+
+  // Read the recovery-email template
+  const templatePath = path.join(process.cwd(), 'src/email/templates/recovery-email.hbs');
+  const templateContent = fs.readFileSync(templatePath, 'utf-8');
+
+  // Upsert the template
+  await prisma.emailTemplate.upsert({
+    where: { name: 'recovery-email' },
+    update: {
+      content: templateContent,
+      subject: 'Complete Your SUGRiA Profile'
+    },
+    create: {
+      name: 'recovery-email',
+      content: templateContent,
+      subject: 'Complete Your SUGRiA Profile'
+    }
+  });
+
+  console.log('Email templates seeded successfully');
 }
 
 main()

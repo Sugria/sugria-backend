@@ -17,6 +17,8 @@ import { ProgramsModule } from './programs/programs.module';
 import { AdminModule } from './admin/admin.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { ScheduleModule } from '@nestjs/schedule';
+import { RecoveryModule } from './recovery/recovery.module';
 
 @Module({
   imports: [
@@ -40,6 +42,8 @@ import { join } from 'path';
       rootPath: join(process.cwd(), 'files'),
       serveRoot: '/files',
     }),
+    ScheduleModule.forRoot(),
+    RecoveryModule,
   ],
   providers: [RoutesService, AppConfigService],
 })

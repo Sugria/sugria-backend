@@ -12,6 +12,9 @@ import { join } from 'path';
 import * as fs from 'fs/promises';
 import * as handlebars from 'handlebars';
 import { Resend } from 'resend';
+import { ResendTrackingService } from './resend-tracking.service';
+import { SendBulkEmailDto } from './dto/send-bulk-email.dto';
+import { EmailTemplateService } from './email-template.service';
 
 @Injectable()
 export class EmailService implements OnModuleInit {
@@ -25,12 +28,14 @@ export class EmailService implements OnModuleInit {
 
   constructor(
     private configService: ConfigService,
+    private resendTrackingService: ResendTrackingService,
+    private emailTemplateService: EmailTemplateService,
   ) {
     this.isDevelopment = this.configService.get('NODE_ENV') === 'development';
     const emailConfig = this.configService.get<EmailConfig>('email');
     this.apiKey = emailConfig.apiKey;
-    this.fromEmail = emailConfig.from;
-    this.resend = new Resend(process.env.RESEND_API_KEY);
+    this.fromEmail = 'SUGRiA Team <no-reply@sugria.com>';
+    this.resend = new Resend(this.configService.get('RESEND_API_KEY'));
     this.loadTemplates().catch(err => {
       this.logger.error('Failed to load email templates:', err);
     });
@@ -71,63 +76,112 @@ export class EmailService implements OnModuleInit {
 
   async sendTemplatedEmail(
     templateName: string,
-    data: any,
+    templateData: Record<string, any>,
     options: {
       to: string;
       subject: string;
-      from?: string;
-      replyTo?: string | string[];
-      cc?: string | string[];
-      bcc?: string | string[];
-      tags?: Array<{ name: string; value: string }>;
-    },
-  ): Promise<EmailResponse> {
+      replyTo?: string;
+      tags?: { name: string; value: string }[];
+    }
+  ) {
     try {
-      const template = this.getTemplate(templateName);
-      const html = template(data);
+      const template = await this.emailTemplateService.getTemplateByName(templateName);
+      const html = this.emailTemplateService.compileTemplate(template.content, templateData);
 
-      if (this.isDevelopment) {
-        this.logger.debug('Email would have been sent in production:');
-        this.logger.debug(`From: ${options.from || this.fromEmail}`);
-        this.logger.debug(`To: ${options.to}`);
-        this.logger.debug(`Subject: ${options.subject}`);
-        this.logger.debug('HTML Content:', html);
-        return { id: 'dev-mode-email-id' };
-      }
+      const { data } = await this.resend.emails.send({
+        from: this.fromEmail,
+        to: [options.to],
+        subject: options.subject,
+        html: html,
+        replyTo: options.replyTo || 'support@sugria.com',
+        tags: options.tags
+      });
 
-      const response = await axios.post<ResendEmailResponse>(
-        `${this.apiUrl}/emails`,
-        {
-          from: options.from || this.fromEmail,
-          to: options.to,
-          subject: options.subject,
-          html: html,
-          reply_to: options.replyTo,
-          cc: options.cc,
-          bcc: options.bcc,
-          tags: options.tags,
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-        },
-      );
+      // Track the email
+      await this.resendTrackingService.trackEmail(data.id, options.to);
 
-      this.logger.debug(`Email sent successfully to ${options.to}`);
-      return response.data;
+      this.logger.log(`Email sent successfully to ${options.to}`);
+      return data;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.data) {
-        const resendError = error.response.data as ResendErrorResponse;
-        this.logger.error(
-          `Failed to send email: ${resendError.message} (${resendError.statusCode})`,
-        );
-        throw new Error(`Failed to send email: ${resendError.message}`);
+      this.logger.error(`Failed to send email to ${options.to}:`, error);
+      throw error;
+    }
+  }
+
+  async sendEmail(to: string, subject: string, html: string) {
+    const { data } = await this.resend.emails.send({
+      from: this.configService.get('EMAIL_FROM'),
+      to,
+      subject,
+      html,
+    });
+
+    // Track the email after sending
+    await this.resendTrackingService.trackEmail(data.id, to);
+
+    return data;
+  }
+
+  async sendBulkEmail(dto: SendBulkEmailDto): Promise<{
+    success: boolean;
+    sent: number;
+    failed: number;
+    results: Array<{ email: string; success: boolean; error?: string }>;
+  }> {
+    const results: Array<{ email: string; success: boolean; error?: string }> = [];
+    let sent = 0;
+    let failed = 0;
+
+    try {
+      // Get the template
+      const template = this.getTemplate('custom-email');
+
+      // Process each recipient
+      for (const recipient of dto.to) {
+        try {
+          // Render template with the custom content
+          const html = template({
+            content: dto.templateData.content || '',
+          });
+
+          // Send email
+          const { data } = await this.resend.emails.send({
+            from: this.configService.get('EMAIL_FROM'),
+            to: recipient,
+            subject: dto.subject,
+            html,
+          });
+
+          // Track the email
+          if (this.resendTrackingService) {
+            await this.resendTrackingService.trackEmail(
+              data.id,
+              recipient
+            );
+          }
+
+          results.push({ email: recipient, success: true });
+          sent++;
+        } catch (error) {
+          this.logger.error(`Failed to send email to ${recipient}:`, error);
+          results.push({
+            email: recipient,
+            success: false,
+            error: error.message
+          });
+          failed++;
+        }
       }
 
-      this.logger.error(`Failed to send email: ${error.message}`);
-      throw new Error('Failed to send email');
+      return {
+        success: true,
+        sent,
+        failed,
+        results
+      };
+    } catch (error) {
+      this.logger.error('Bulk email sending failed:', error);
+      throw error;
     }
   }
 } 
