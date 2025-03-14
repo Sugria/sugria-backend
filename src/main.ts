@@ -1,3 +1,8 @@
+import { webcrypto } from 'node:crypto';
+if (!global.crypto) {
+  global.crypto = webcrypto;
+}
+
 import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe, Logger } from '@nestjs/common';
