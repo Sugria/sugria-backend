@@ -2,8 +2,7 @@ import { Injectable, Logger, ConflictException, BadRequestException } from '@nes
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { RecoveryEmailService } from './recovery-email.service';
-import * as crypto from 'crypto';
-import * as CryptoJS from 'crypto-js';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class RecoveryService {
@@ -230,8 +229,6 @@ export class RecoveryService {
   }
 
   generateToken(): string {
-    return crypto.randomUUID(); // Using Node's crypto
-    // Or if using crypto-js
-    // return CryptoJS.lib.WordArray.random(16).toString();
+    return randomUUID();
   }
 } 
