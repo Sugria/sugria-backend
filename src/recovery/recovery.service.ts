@@ -2,7 +2,8 @@ import { Injectable, Logger, ConflictException, BadRequestException } from '@nes
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { RecoveryEmailService } from './recovery-email.service';
-import { v4 as uuidv4 } from 'uuid';
+import * as crypto from 'crypto';
+import * as CryptoJS from 'crypto-js';
 
 @Injectable()
 export class RecoveryService {
@@ -26,7 +27,7 @@ export class RecoveryService {
           data: {
             email: entry.email,
             type: entry.type,
-            token: uuidv4(),
+            token: this.generateToken(),
           },
         });
         results.success.push(entry.email);
@@ -211,7 +212,7 @@ export class RecoveryService {
           data: {
             email: entry.email,
             type: entry.type,
-            token: uuidv4(), // Generates unique token
+            token: this.generateToken(),
             status: 'pending'
           }
         });
@@ -226,5 +227,11 @@ export class RecoveryService {
     }
 
     return results;
+  }
+
+  generateToken(): string {
+    return crypto.randomUUID(); // Using Node's crypto
+    // Or if using crypto-js
+    // return CryptoJS.lib.WordArray.random(16).toString();
   }
 } 
