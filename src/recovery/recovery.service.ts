@@ -2,7 +2,6 @@ import { Injectable, Logger, ConflictException, BadRequestException } from '@nes
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { RecoveryEmailService } from './recovery-email.service';
-import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class RecoveryService {
@@ -229,6 +228,8 @@ export class RecoveryService {
   }
 
   generateToken(): string {
-    return uuidv4();
+    const timestamp = Date.now().toString(36);
+    const randomPart = Math.random().toString(36).substring(2, 15);
+    return `${timestamp}-${randomPart}`;
   }
 } 
